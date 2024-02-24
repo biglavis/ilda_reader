@@ -3,27 +3,26 @@ def read_ilda(file: str):
         with open(rf'{file}', 'rb') as f:
             return f.read()
         
-def unpack_ilda(file: str, head = False):
+def unpack_ilda(file: str, filter = True):
     if data := read_ilda(file):
-        return unpack_data(data, head)
+        return unpack_data(data, filter)
         
-def unpack_data(data, head: bool):
-    unpacked = []
-
+def unpack_data(data, filter: bool):
+    next_data = data
     while True:
-        header, data = read_header(data)
+        header, next_data = read_header(next_data)
 
+        # restart if EOF
         if header['num_records'] == 0:
-            if head: unpacked.append((header, None))
-            else: unpacked.append(None)
-            break
+            header, next_data = read_header(data)
 
-        records, data = read_records(data, **header)
-        
-        if head: unpacked.append((header, records))
-        else: unpacked.append(records)
+        records, next_data = read_records(next_data, **header)
 
-    return unpacked
+        if records:
+            if filter: 
+                yield header['frame'], header['num_frames'], filter_records(records)
+            else:
+                yield header['frame'], header['num_frames'], records
 
 def read_header(data):
     header = {
@@ -65,10 +64,6 @@ def read_record(record, format):
 
     return x, y, status
 
-def filter_frames(frames: list):
-    frames = [frame for frame in frames if frame != None]
-    for i, frame in enumerate(frames):
-        frames[i] = [pos for i,pos in enumerate(frame) if pos[2] or i+1 == len(frame) or frame[i+1][2]]
-
-    return frames
+def filter_records(records: list):
+    return [pos for i,pos in enumerate(records) if pos[2] or i+1 == len(records) or records[i+1][2]]
         

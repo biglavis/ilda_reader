@@ -138,8 +138,10 @@ class Canvas(tk.Frame):
                 time.sleep(0.1)
 
     def draw(self):
-        for i, frame in enumerate(self.data):
-            self.update_frame_counter(i + 1, len(self.data))
+        while True:
+            index, total, frame = next(self.data)
+
+            self.update_frame_counter(index + 1, total)
 
             # update fps/pps
             if (end := time.time()) - self.start > 1:
@@ -147,9 +149,8 @@ class Canvas(tk.Frame):
                 self.start = time.time()
 
             # draw frame
-            if frame:
-                self.draw_frame(frame)
-                self.clear()
+            self.draw_frame(frame)
+            self.clear()
 
             self.frame_count += 1
 
@@ -215,7 +216,7 @@ class Canvas(tk.Frame):
                 self.open_file(file)
 
     def open_file(self, file):
-        self.data = ilda.filter_frames(ilda.unpack_ilda(file, head = False))
+        self.data = ilda.unpack_ilda(file, filter = True)
         self.new_data = True
 
     def close_file(self):
