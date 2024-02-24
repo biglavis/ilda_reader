@@ -202,7 +202,7 @@ class Canvas(tk.Frame):
 
     #-------------------------------------------------- file methods --------------------------------------------------#
     def get_files(self):
-        self.files[0] = glob.glob('*.ild')
+        self.files[0] = glob.glob('**/*.ild', recursive=True)
         self.file_cbox['values'] = self.files[0] + self.files[1]
 
     def browse_files(self):
