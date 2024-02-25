@@ -6,7 +6,7 @@ from tkinter import ttk
 class Console(tk.Frame):
     def __init__(self, master, ser = None):
         super().__init__(master, width=600)
-        self.grid(row=2, column=0, sticky='NSEW')
+        self.grid(row=1, column=0, sticky='NSEW')
         self.rowconfigure(1, weight=1)
         self.columnconfigure(0, weight=1)
 
