@@ -4,6 +4,7 @@ from tkinter import ttk
 import threading
 import time
 from time import perf_counter_ns
+import math
 import glob
 import ilda
 
@@ -16,7 +17,7 @@ def wait_us(delay):
 
 class Canvas(tk.Frame):
 
-    def __init__(self, master, ser = None, size = 600, speed = 30):
+    def __init__(self, master, ser = None, size = 600):
         super().__init__(master)
         self.grid(row=0, column=0, sticky="EW")
         self.columnconfigure(0, weight=1)
@@ -26,8 +27,7 @@ class Canvas(tk.Frame):
         self.size = size
         self.scale = 1
 
-        self.speed = speed
-        self.max_speed = 1000
+        self.speed = 500
 
         self.frame_count = 0
         self.point_count = 0
@@ -67,11 +67,11 @@ class Canvas(tk.Frame):
         self.speed_entry = tk.Entry(self.menu, width=5)
         self.speed_entry.grid(row=0, column=5, padx=4)
 
-        self.speed_entry.bind('<Return>', self.update_speed)
+        self.speed_entry.bind('<Return>', self.entry_set_speed)
 
-        self.speed_scale = ttk.Scale(self.menu, orient='horizontal', from_=1, to=self.max_speed, length=50, command=self.set_speed)
-        self.speed_scale.set(self.speed)
-        self.speed_scale.grid(row=0, column=4, sticky='EW')
+        self.speed_slider = ttk.Scale(self.menu, orient='horizontal', from_=0, to=100, length=50, command=self.slider_set_speed)
+        self.speed_slider.set(50)
+        self.speed_slider.grid(row=0, column=4, sticky='EW')
 
         # scale slider/entry
         self.scale_label = tk.Label(self.menu, text='Scale')
@@ -80,11 +80,11 @@ class Canvas(tk.Frame):
         self.scale_entry = tk.Entry(self.menu, width=5)
         self.scale_entry.grid(row=0, column=8, padx=4)
 
-        self.scale_entry.bind('<Return>', self.update_scale)
+        self.scale_entry.bind('<Return>', self.entry_set_scale)
 
-        self.scale_scale = ttk.Scale(self.menu, orient='horizontal', from_=1, to=100, length=50, command=self.set_scale)
-        self.scale_scale.set(self.scale * 100)
-        self.scale_scale.grid(row=0, column=7, sticky='EW')
+        self.scale_slider = ttk.Scale(self.menu, orient='horizontal', from_=1, to=100, length=50, command=self.slider_set_scale)
+        self.scale_slider.set(self.scale * 100)
+        self.scale_slider.grid(row=0, column=7, sticky='EW')
 
         #-------------------------------------------------- canvas --------------------------------------------------#
         self.canvas = tk.Canvas(self, height=self.size, width=self.size, borderwidth=0, highlightthickness=0, background='black')
@@ -256,8 +256,50 @@ class Canvas(tk.Frame):
         self.new_data = True
         self.file_cbox.set('')
 
+    #-------------------------------------------------- speed methods --------------------------------------------------#
+    def entry_set_speed(self, event):
+        """
+        Sets the speed.
+        """
+
+        value = int(self.speed_entry.get())
+
+        if value < 0:
+            value = 0
+        elif value > 600:
+            value = 600
+
+        value = math.log((value + 6.24) / 7.24) / math.log(1.045272)
+
+        self.speed_slider.set(value)
+
+    def slider_set_speed(self, value = None):
+        """
+        Sets the speed.
+        """
+        
+        self.speed = round(7.24 * pow(1.045272, float(value)) - 6.24)
+        self.speed_entry.delete(0, 'end')
+        self.speed_entry.insert(0, self.speed)
+
+    def enable_speed(self):
+        """
+        Enables speed slider/entry.
+        """
+
+        self.speed_slider.config(state='normal')
+        self.speed_entry.config(state='normal')
+
+    def disable_speed(self):
+        """
+        Disables speed slider/entry.
+        """
+        
+        self.speed_slider.config(state='disabled')
+        self.speed_entry.config(state='disabled')
+
     #-------------------------------------------------- scale methods --------------------------------------------------#
-    def update_scale(self, event):
+    def entry_set_scale(self, event):
         """
         Updates scale slider/entry and sets the scale.
         """
@@ -268,10 +310,9 @@ class Canvas(tk.Frame):
         elif scale > 100:
             scale = 100
 
-        self.scale_scale.set(scale)
-        self.set_scale(scale)
+        self.scale_slider.set(scale)
 
-    def set_scale(self, value):
+    def slider_set_scale(self, value):
         """
         Sets the scale.
         """
@@ -280,47 +321,6 @@ class Canvas(tk.Frame):
         self.scale = scale / 100
         self.scale_entry.delete(0, 'end')
         self.scale_entry.insert(0, scale)
-
-    #-------------------------------------------------- speed methods --------------------------------------------------#
-    def update_speed(self, event):
-        """
-        Updates speed slider/entry and sets the speed.
-        """
-
-        speed = int(self.speed_entry.get())
-
-        if speed < 1:
-            speed = 1
-        elif speed > self.max_speed:
-            speed = self.max_speed
-
-        self.speed_scale.set(speed)
-        self.set_speed(speed)
-
-    def set_speed(self, value):
-        """
-        Sets the speed.
-        """
-
-        self.speed = round(float(value))
-        self.speed_entry.delete(0, 'end')
-        self.speed_entry.insert(0, self.speed)
-
-    def enable_speed(self):
-        """
-        Enables speed slider/entry.
-        """
-
-        self.speed_scale.config(state='normal')
-        self.speed_entry.config(state='normal')
-
-    def disable_speed(self):
-        """
-        Disables speed slider/entry.
-        """
-        
-        self.speed_scale.config(state='disabled')
-        self.speed_entry.config(state='disabled')
 
     #-------------------------------------------------- counter methods --------------------------------------------------#
     def update_frame_counter(self, current, total):
