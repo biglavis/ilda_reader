@@ -51,27 +51,32 @@ class _serial(serial.Serial):
         self.enable_print = True
 
     def serial_listener(self):
-        '''
-        Checks if serial connection is active. Prints recieved messages to console.
-        '''
+        """
+        Checks if serial connection is active. Prints recieved data to console.
+        """
 
         while True:
+            # get available serial ports
             available_ports = [port.device for port in serial.tools.list_ports.comports()]
 
+            # if serial is open
             if self.is_open:
+
+                # close serial if port is unavailable
                 if self.port not in available_ports:
                     self.close()
                     self.console.print(f'DISCONNECTED FROM {self.port}', 'error')
-                    self.canvas.enable_buttons(False)
+                    self.canvas.disable_buttons()
                     self.laser = None
 
+                # read incoming data
                 response = ''
                 try:
                     if self.in_waiting:
                         if response := self.readline().decode('utf-8'):
                             self.ready.set()
 
-                            # print response if enabled
+                            # print recieved data if enabled
                             if self.enable_print:
                                 if 'invalid' in response:
                                     self.console.print(response, 'error')
@@ -80,12 +85,17 @@ class _serial(serial.Serial):
                 except:
                     pass
             
+            # open serial if port is available
             elif self.port in available_ports:
                 self.open()
                 self.console.print(f'CONNECTED TO {self.port}', 'status')
-                self.canvas.enable_buttons(True)
+                self.canvas.enable_buttons()
 
     def send(self, string: str):
+        """
+        Writes `string` ended by `'\\n'` to serial.
+        """
+
         if self.is_open:
             self.ready.wait(timeout=SERIAL_TIMEOUT)
             

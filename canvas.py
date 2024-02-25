@@ -52,15 +52,15 @@ class Canvas(tk.Frame):
 
         self.file_cbox.bind('<<ComboboxSelected>>', lambda _: self.open_file(self.file_cbox.get()))
 
-        # browse
+        # browse button
         self.browse_button = tk.Button(self.menu, text='Browse', command=self.browse_files)
         self.browse_button.grid(row=0, column=1)
 
-        # close
+        # close button
         self.close_button = tk.Button(self.menu, text=' X ', command=self.close_file)
         self.close_button.grid(row=0, column=2)
 
-        # speed
+        # speed slider/entry
         self.speed_label = tk.Label(self.menu, text='Speed')
         self.speed_label.grid(row=0, column=3, sticky="E")
 
@@ -73,7 +73,7 @@ class Canvas(tk.Frame):
         self.speed_scale.set(self.speed)
         self.speed_scale.grid(row=0, column=4, sticky='EW')
 
-        # scale
+        # scale slider/entry
         self.scale_label = tk.Label(self.menu, text='Scale')
         self.scale_label.grid(row=0, column=6, sticky="E")
 
@@ -97,20 +97,24 @@ class Canvas(tk.Frame):
         self.misc.columnconfigure(2, weight=1)
         self.misc.grid_propagate(0)
 
+        # frame counter
         self.frame_counter = tk.Label(self.misc, text="Frame: -- / --")
         self.frame_counter.grid(row=0, column=0, padx=(4,0),sticky="W")
 
+        # fps/pps counter
         self.fps_pps_counter = tk.Label(self.misc, text="-- / --")
         self.fps_pps_counter.grid(row=0, column=1, sticky="W")
 
         #-------------------------------------------------- options --------------------------------------------------#
+        # print response button
         self.enable_print_label = tk.Label(self.misc, text="Print Response")
         self.enable_print_label.grid(row=0, column=2, sticky="E")
 
         self.enable_print_value = tk.BooleanVar(value=True)
-        self.enable_print_button = tk.Checkbutton(self.misc, borderwidth=0, highlightthickness=0, state='disabled', var=self.enable_print_value, command=self.enable_print)
+        self.enable_print_button = tk.Checkbutton(self.misc, borderwidth=0, highlightthickness=0, state='disabled', var=self.enable_print_value, command=self.set_print)
         self.enable_print_button.grid(row=0, column=3, sticky="E")
 
+        # preview only button
         self.preview_label = tk.Label(self.misc, text="Preview Only")
         self.preview_label.grid(row=0, column=4, sticky="E")
 
@@ -123,7 +127,7 @@ class Canvas(tk.Frame):
         self.new_data = False
         self.transmit = False
 
-        # draw
+        # start drawing
         self.drawer = threading.Thread(target=self.wait)
         self.drawer.daemon = True
         self.drawer.start()
@@ -138,9 +142,15 @@ class Canvas(tk.Frame):
                 time.sleep(0.1)
 
     def draw(self):
+        """
+        Draws ILDA data from `self.data`. 
+        """
+                
         while True:
+            # get frame
             index, total, frame = next(self.data)
 
+            # update frame counter
             self.update_frame_counter(index + 1, total)
 
             # update fps/pps
@@ -159,26 +169,29 @@ class Canvas(tk.Frame):
                 return
             
     def draw_frame(self, frame, px_size=3):
-        prev_pos = None
+        """
+        Draws frame on canvas. If `self.transmit` is true, writes frame to serial.
+        """
 
-        for pos in frame:
-            if pos[2]:
-                x = round((pos[0] * self.scale + 32768) / 65535 * self.size)
-                y = round((32767 - pos[1] * self.scale) / 65535 * self.size)
+        for point in frame:
+            # draw point on canvas
+            if point[2]:
+                x = round((point[0] * self.scale + 32768) / 65535 * self.size)
+                y = round((32767 - point[1] * self.scale) / 65535 * self.size)
                 self.canvas.create_rectangle(x, y, x+px_size, y+px_size, fill='red', outline='red', state='disabled')
 
-            # not transmitting
+            # not transmitting - wait delay
             if not self.transmit:
                 wait_us(1000000/(self.speed*len(frame)))
                 self.point_count += 1
 
-            # transmitting - only send command if current position != previous position
-            elif pos != prev_pos:
-                norm_x = ((pos[0] + 32768) / 65535 * 2 - 1) * self.scale
-                norm_y = ((pos[1] + 32768) / 65535 * 2 - 1) * self.scale
+            # transmitting - write to serial
+            else:
+                norm_x = ((point[0] + 32768) / 65535 * 2 - 1) * self.scale
+                norm_y = ((point[1] + 32768) / 65535 * 2 - 1) * self.scale
 
-                if self.ser.laser != pos[2]:
-                    if pos[2]:
+                if self.ser.laser != point[2]:
+                    if point[2]:
                         self.ser.send(f'laser on\n')
                         self.ser.ready.wait(timeout=SERIAL_TIMEOUT)
                         self.ser.laser = True   
@@ -196,17 +209,28 @@ class Canvas(tk.Frame):
             if self.new_data:
                 break
 
-            prev_pos = pos
-
+    #-------------------------------------------------- canvas methods --------------------------------------------------#
     def clear(self):
+        """
+        Clears the canvas.
+        """
+
         self.canvas.delete('all')
 
     #-------------------------------------------------- file methods --------------------------------------------------#
     def get_files(self):
+        """
+        Gets ILDA files in the current directory and subdirectories.
+        """
+
         self.files[0] = glob.glob('**/*.ild', recursive=True)
         self.file_cbox['values'] = self.files[0] + self.files[1]
 
     def browse_files(self):
+        """
+        Opens file explorer.
+        """
+
         file = filedialog.askopenfilename(filetypes=(('ILDA', '*.ild'), ('All Files', '*.*')))
         if file:
             if file not in self.files:
@@ -216,16 +240,28 @@ class Canvas(tk.Frame):
                 self.open_file(file)
 
     def open_file(self, file):
+        """
+        Opens `file` and returns a generator object to `self.data`.
+        """
+
         self.data = ilda.unpack_ilda(file, filter = True)
         self.new_data = True
 
     def close_file(self):
+        """
+        Sets `self.data` = `None`.
+        """
+
         self.data = None
         self.new_data = True
         self.file_cbox.set('')
 
     #-------------------------------------------------- scale methods --------------------------------------------------#
     def update_scale(self, event):
+        """
+        Updates scale slider/entry and sets the scale.
+        """
+
         scale = int(self.scale_entry.get())
         if scale < 1:
             scale = 1
@@ -236,6 +272,10 @@ class Canvas(tk.Frame):
         self.set_scale(scale)
 
     def set_scale(self, value):
+        """
+        Sets the scale.
+        """
+
         scale = round(float(value))
         self.scale = scale / 100
         self.scale_entry.delete(0, 'end')
@@ -243,6 +283,10 @@ class Canvas(tk.Frame):
 
     #-------------------------------------------------- speed methods --------------------------------------------------#
     def update_speed(self, event):
+        """
+        Updates speed slider/entry and sets the speed.
+        """
+
         speed = int(self.speed_entry.get())
 
         if speed < 1:
@@ -254,23 +298,43 @@ class Canvas(tk.Frame):
         self.set_speed(speed)
 
     def set_speed(self, value):
+        """
+        Sets the speed.
+        """
+
         self.speed = round(float(value))
         self.speed_entry.delete(0, 'end')
         self.speed_entry.insert(0, self.speed)
 
     def enable_speed(self):
+        """
+        Enables speed slider/entry.
+        """
+
         self.speed_scale.config(state='normal')
         self.speed_entry.config(state='normal')
 
     def disable_speed(self):
+        """
+        Disables speed slider/entry.
+        """
+        
         self.speed_scale.config(state='disabled')
         self.speed_entry.config(state='disabled')
 
     #-------------------------------------------------- counter methods --------------------------------------------------#
     def update_frame_counter(self, current, total):
+        """
+        Updates frame counter.
+        """
+
         self.frame_counter.config(text = f'Frame: {current} / {total}')
 
     def update_fps_pps_counter(self, start, end):
+        """
+        Updates fps/pps counters.
+        """
+
         fps = self.frame_count / (end - start)
         pps = self.point_count / (end - start)
         self.fps_pps_counter.config(text = f'{round(fps, 1)} / {round(pps,1)}')
@@ -279,7 +343,11 @@ class Canvas(tk.Frame):
         self.point_count = 0
 
     #-------------------------------------------------- button methods --------------------------------------------------#
-    def enable_print(self):
+    def set_print(self):
+        """
+        Enable/disable serial to write to console.
+        """
+
         if self.ser:
             if self.enable_print_value.get():
                 self.ser.ready.wait()
@@ -288,27 +356,39 @@ class Canvas(tk.Frame):
                 self.ser.enable_print = False
 
     def set_preview_only(self):
+        """
+        Enable/disable preview only mode.
+        """
+
         if self.preview_value.get():
             self.transmit = False
             self.enable_speed()
 
             self.enable_print_value.set(True)
-            self.enable_print()
+            self.set_print()
 
         else:
             self.enable_print_value.set(False)
-            self.enable_print()
+            self.set_print()
 
             self.transmit = True
             self.disable_speed()
     
-    def enable_buttons(self, en: bool):
-        if en:
-            self.enable_print_button.config(state='normal')
-            self.preview_button.config(state='normal')
-        else:
-            self.transmit = False
-            self.preview_value.set(True)
-            self.set_preview_only()
-            self.enable_print_button.config(state='disabled')
-            self.preview_button.config(state='disabled')
+    def enable_buttons(self):
+        """
+        Enables print/preview buttons.
+        """
+
+        self.enable_print_button.config(state='normal')
+        self.preview_button.config(state='normal')
+
+    def disable_buttons(self):
+        """
+        Disables print/preview buttons.
+        """       
+
+        self.transmit = False
+        self.preview_value.set(True)
+        self.set_preview_only()
+        self.enable_print_button.config(state='disabled')
+        self.preview_button.config(state='disabled')

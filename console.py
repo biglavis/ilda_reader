@@ -14,7 +14,7 @@ class Console(tk.Frame):
 
         self.ser = ser
 
-        #-------------------------------------------------- command line --------------------------------------------------#\
+        #-------------------------------------------------- command line --------------------------------------------------#
         self.command = tk.Frame(self, height=21)
         self.command.grid(row=0, column=0, columnspan=2, padx=4, pady=4, sticky='EW')
         self.command.columnconfigure(0, weight=8)
@@ -63,10 +63,18 @@ class Console(tk.Frame):
         self.console.tag_config('error', foreground='red')
 
     def get_ports(self):
+        """
+        Gets available serial ports.
+        """
+
         ports = [f'{port.device}: {port.description.partition(" (COM")[0]}' for port in serial.tools.list_ports.comports()]
         self.port_cbox['values'] = ports
 
     def set_port(self, event):
+        """
+        Sets the serial port.
+        """
+
         if self.ser:
             port = self.port_cbox.get().partition(':')[0]
 
@@ -80,6 +88,10 @@ class Console(tk.Frame):
             self.print(f'SET: {port}', 'status')
 
     def set_baudrate(self, event):
+        """
+        Sets the baudrate.
+        """
+
         if self.ser:
             baudrate = int(self.baudrate_cbox.get().split(' ')[0])
 
@@ -90,9 +102,9 @@ class Console(tk.Frame):
             self.print(f'SET: {baudrate} baud', 'status')
 
     def send(self, event):
-        '''
-        Sends user commands to console/serial.
-        '''
+        """
+        Writes user command to console/serial.
+        """
         
         command = self.entry.get().strip()
         self.entry.delete(0, 'end')
@@ -106,9 +118,9 @@ class Console(tk.Frame):
                     self.ser.send(command)
 
     def print(self, string: str, tag=None):
-        '''
-        Prints `string` to the console.
-        '''
+        """
+        Writes `string` to console.
+        """
 
         if not string.endswith('\n'):
             string += '\n'
@@ -120,9 +132,9 @@ class Console(tk.Frame):
         self.console.see('end')
 
     def clear(self):
-        '''
+        """
         Clears the console.
-        '''
+        """
 
         self.console.configure(state='normal')
         self.console.delete(1.0, 'end')
