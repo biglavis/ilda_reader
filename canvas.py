@@ -155,7 +155,7 @@ class Canvas(tk.Frame):
 
             # update fps/pps
             if (end := time.time()) - self.start > 1:
-                threading.Thread(target=self.update_fps_pps_counter, args=(self.start, end)).start()
+                self.update_fps_pps_counter(self.start, end)
                 self.start = time.time()
 
             # draw frame
@@ -255,6 +255,8 @@ class Canvas(tk.Frame):
         self.data = None
         self.new_data = True
         self.file_cbox.set('')
+        self.frame_counter.config(text = "Frame: -- / --")
+        self.fps_pps_counter.config(text = "-- / --")
 
     #-------------------------------------------------- speed methods --------------------------------------------------#
     def entry_set_speed(self, event):
