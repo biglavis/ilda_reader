@@ -27,7 +27,7 @@ class Canvas(tk.Frame):
         self.size = size
         self.scale = 1
 
-        self.speed = 500
+        self.speed = 0
 
         self.frame_count = 0
         self.point_count = 0
@@ -264,12 +264,12 @@ class Canvas(tk.Frame):
 
         value = int(self.speed_entry.get())
 
-        if value < 0:
-            value = 0
-        elif value > 600:
-            value = 600
+        if value < 1:
+            value = 1
+        elif value > 300:
+            value = 300
 
-        value = math.log((value + 6.24) / 7.24) / math.log(1.045272)
+        value = math.log((value + 2.49) / 3.49) / math.log(1.045632)
 
         self.speed_slider.set(value)
 
@@ -277,8 +277,8 @@ class Canvas(tk.Frame):
         """
         Sets the speed.
         """
-        
-        self.speed = round(7.24 * pow(1.045272, float(value)) - 6.24)
+
+        self.speed = round(3.49 * pow(1.045632, float(value)) - 2.49)
         self.speed_entry.delete(0, 'end')
         self.speed_entry.insert(0, self.speed)
 
