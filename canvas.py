@@ -13,7 +13,7 @@ SERIAL_TIMEOUT = 1
 def wait_us(delay):
     target = perf_counter_ns() + delay * 1000
     while perf_counter_ns() < target:
-        pass
+        time.sleep(0)
 
 class Canvas(tk.Frame):
 
@@ -40,7 +40,7 @@ class Canvas(tk.Frame):
         #-------------------------------------------------- menu --------------------------------------------------#
         self.menu = tk.Frame(self)
         self.menu.grid(row=0, column=0, pady=4, sticky='EW')
-        self.menu.columnconfigure(0, weight=8)
+        self.menu.columnconfigure(0, weight=2)
         self.menu.columnconfigure(3, minsize=100)
         self.menu.columnconfigure(4, weight=1)
         self.menu.columnconfigure(6, minsize=40)
