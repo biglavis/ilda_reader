@@ -139,7 +139,9 @@ class Canvas(tk.Frame):
     def wait(self):
         while True:
             if self.data:
-                self.new_data = False
+                if self.new_data:
+                    self.new_data = False
+                    self.start = time.time()
                 self.draw()
 
             else:
@@ -211,7 +213,7 @@ class Canvas(tk.Frame):
 
             # new data available
             if self.new_data:
-                break
+                return
 
     #-------------------------------------------------- canvas methods --------------------------------------------------#
     def clear(self):
@@ -245,22 +247,32 @@ class Canvas(tk.Frame):
 
     def open_file(self, file):
         """
-        Opens `file` and returns a generator object to `self.data`.
+        Opens `file` and returns a generator object to `self.data`. Resets speed.
         """
+
+        self.play_speed = self.speed
+        self.settled = False
 
         self.data = ilda.unpack_ilda(file, filter = True)
         self.new_data = True
 
     def close_file(self):
         """
-        Sets `self.data` = `None`.
+        Sets `self.data` = `None`. Resets counters.
         """
 
         self.data = None
         self.new_data = True
+
         self.file_cbox.set('')
         self.frame_counter.config(text = "Frame: -- / --")
         self.fps_pps_counter.config(text = "-- / --")
+
+        self.fps = 0
+        self.settled = False
+
+        self.frame_count = 0
+        self.point_count = 0
 
     #-------------------------------------------------- speed methods --------------------------------------------------#
     def entry_set_speed(self, event):
