@@ -360,7 +360,7 @@ class Canvas(tk.Frame):
 
     def update_fps_pps_counter(self, start, end):
         """
-        Updates fps/pps counters and corrects speed.
+        Updates fps/pps counters and adjusts speed.
         """
 
         self.fps = round(self.frame_count / (end - start), 1)
