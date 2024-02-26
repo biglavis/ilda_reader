@@ -307,6 +307,8 @@ class Canvas(tk.Frame):
         Tries to adjust speed to match requested fps within 5%
         """
 
+        print(self.play_speed)
+
         if self.fps < self.speed * 0.95 and self.play_speed < 1000:
             if self.fps < self.speed * 0.8:
                 self.play_speed = self.play_speed * 1.5
@@ -374,7 +376,11 @@ class Canvas(tk.Frame):
 
         self.fps = round(self.frame_count / (end - start), 1)
         pps = round(self.point_count / (end - start), 1)
-        self.fps_pps_counter.config(text = f'{self.fps} / {pps}')
+
+        if self.play_speed < 1000:
+            self.fps_pps_counter.config(text = f'{self.fps} / {pps}')
+        else:
+            self.fps_pps_counter.config(text = f'{self.fps} / {pps}   MAX')
 
         if self.settled:
             self.adjust_speed()
