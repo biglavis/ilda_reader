@@ -28,6 +28,10 @@ class Canvas(tk.Frame):
         self.scale = 1
 
         self.speed = 0
+        self.play_speed = 0
+
+        self.fps = 0
+        self.settled = False
 
         self.frame_count = 0
         self.point_count = 0
@@ -182,7 +186,7 @@ class Canvas(tk.Frame):
 
             # not transmitting - wait delay
             if not self.transmit:
-                wait_us(1000000/(self.speed*len(frame)))
+                wait_us(1000000/(self.play_speed*len(frame)))
                 self.point_count += 1
 
             # transmitting - write to serial
@@ -280,9 +284,31 @@ class Canvas(tk.Frame):
         Sets the speed.
         """
 
-        self.speed = round(3.49 * pow(1.045632, float(value)) - 2.49)
+        speed = round(3.49 * pow(1.045632, float(value)) - 2.49)
+        self.speed = speed
+        self.play_speed = speed
+
+        self.settled = False
+
         self.speed_entry.delete(0, 'end')
         self.speed_entry.insert(0, self.speed)
+
+    def adjust_speed(self):
+        """
+        Tries to adjust speed to match requested fps within 5%
+        """
+
+        if self.fps < self.speed * 0.95 and self.play_speed < 1000:
+            if self.fps < self.speed * 0.8:
+                self.play_speed = self.play_speed * 1.5
+            else:
+                self.play_speed = self.play_speed * 1.1
+
+        elif self.fps > self.speed * 1.05:
+            if self.fps > self.speed * 1.2:
+                self.play_speed = self.play_speed * 0.67
+            else:
+                self.play_speed = self.play_speed * 0.91
 
     def enable_speed(self):
         """
@@ -334,12 +360,17 @@ class Canvas(tk.Frame):
 
     def update_fps_pps_counter(self, start, end):
         """
-        Updates fps/pps counters.
+        Updates fps/pps counters and corrects speed.
         """
 
-        fps = self.frame_count / (end - start)
-        pps = self.point_count / (end - start)
-        self.fps_pps_counter.config(text = f'{round(fps, 1)} / {round(pps,1)}')
+        self.fps = round(self.frame_count / (end - start), 1)
+        pps = round(self.point_count / (end - start), 1)
+        self.fps_pps_counter.config(text = f'{self.fps} / {pps}')
+
+        if self.settled:
+            self.adjust_speed()
+        else:
+            self.settled = True
 
         self.frame_count = 0
         self.point_count = 0
