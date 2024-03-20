@@ -6,6 +6,7 @@ import time
 from time import perf_counter_ns
 import math
 import glob
+import os
 import ilda
 
 SERIAL_TIMEOUT = 1
@@ -229,7 +230,8 @@ class Canvas(tk.Frame):
         Gets ILDA files in the current directory and subdirectories.
         """
 
-        self.files[0] = glob.glob('**/*.ild', recursive=True)
+        src = os.path.dirname(__file__)
+        self.files[0] = glob.glob(f'{src}/**/*.ild', recursive=True)
         self.file_cbox['values'] = self.files[0] + self.files[1]
 
     def browse_files(self):
@@ -237,8 +239,7 @@ class Canvas(tk.Frame):
         Opens file explorer.
         """
 
-        file = filedialog.askopenfilename(filetypes=(('ILDA', '*.ild'), ('All Files', '*.*')))
-        if file:
+        if file := filedialog.askopenfilename(filetypes=(('ILDA', '*.ild'), ('All Files', '*.*'))):
             if file not in self.files:
                 self.files[1].append(file)
                 self.file_cbox['values'] = self.files[0] + self.files[1]
@@ -306,8 +307,6 @@ class Canvas(tk.Frame):
         """
         Tries to adjust speed to match requested fps within 5%
         """
-
-        print(self.play_speed)
 
         if self.fps < self.speed * 0.95 and self.play_speed < 1000:
             if self.fps < self.speed * 0.8:
