@@ -376,10 +376,10 @@ class Canvas(tk.Frame):
         self.fps = round(self.frame_count / (end - start), 1)
         pps = round(self.point_count / (end - start), 1)
 
-        if self.play_speed < 1000:
-            self.fps_pps_counter.config(text = f'{self.fps} / {pps}')
-        else:
+        if (not self.transmit and self.play_speed >= 1000):
             self.fps_pps_counter.config(text = f'{self.fps} / {pps}   MAX')
+        else:
+            self.fps_pps_counter.config(text = f'{self.fps} / {pps}')
 
         if self.settled:
             self.adjust_speed()
