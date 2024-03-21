@@ -87,7 +87,7 @@ class Canvas(tk.Frame):
 
         self.scale_entry.bind('<Return>', self.entry_set_scale)
 
-        self.scale_slider = ttk.Scale(self.menu, orient='horizontal', from_=1, to=100, length=50, command=self.slider_set_scale)
+        self.scale_slider = ttk.Scale(self.menu, orient='horizontal', from_=1, to=200, length=50, command=self.slider_set_scale)
         self.scale_slider.set(self.scale * 100)
         self.scale_slider.grid(row=0, column=7, sticky='EW')
 
@@ -180,12 +180,27 @@ class Canvas(tk.Frame):
         Draws frame on canvas. If `self.transmit` is true, writes frame to serial.
         """
 
+        x0, y0 = None, None
         for point in frame:
+            # normalize point between [-1,1]
+            sign_x = 1 if point[0] == 0 else point[0]/abs(point[0])
+            sign_y = 1 if point[1] == 0 else point[1]/abs(point[1])
+            norm_x = min(abs(((point[0] + 32768) / 65535 * 2 - 1) * self.scale), 1) * sign_x
+            norm_y = min(abs(((point[1] + 32768) / 65535 * 2 - 1) * self.scale), 1) * sign_y
+
             # draw point on canvas
             if point[2]:
-                x = round((point[0] * self.scale + 32768) / 65535 * self.size)
-                y = round((32767 - point[1] * self.scale) / 65535 * self.size)
-                self.canvas.create_rectangle(x, y, x+px_size, y+px_size, fill='red', outline='red', state='disabled')
+                x = self.size/2 + self.size/2 * norm_x
+                y = self.size/2 - self.size/2 * norm_y
+
+                self.canvas.create_rectangle(x-px_size/2-1, y-px_size/2-1, x+px_size, y+px_size, fill='red', state='disabled')
+                if x0 and y0:
+                    self.canvas.create_line(x0, y0, x, y, fill='red')
+
+                x0, y0 = x, y
+
+            else:
+                x0, y0 = None, None
 
             # not transmitting - wait delay
             if not self.transmit:
@@ -194,9 +209,6 @@ class Canvas(tk.Frame):
 
             # transmitting - write to serial
             else:
-                norm_x = ((point[0] + 32768) / 65535 * 2 - 1) * self.scale
-                norm_y = ((point[1] + 32768) / 65535 * 2 - 1) * self.scale
-
                 if self.ser.laser != point[2]:
                     if point[2]:
                         self.ser.send(f'laser on\n')
@@ -232,7 +244,7 @@ class Canvas(tk.Frame):
 
         src = os.path.dirname(__file__)
         self.files[0] = glob.glob(f'{src}/**/*.ild', recursive=True)
-        self.file_cbox['values'] = self.files[0] + self.files[1]
+        self.file_cbox['values'] = [file.split('\\')[-1] for file in (self.files[0] + self.files[1])]
 
     def browse_files(self):
         """
@@ -241,10 +253,10 @@ class Canvas(tk.Frame):
 
         if file := filedialog.askopenfilename(filetypes=(('ILDA', '*.ild'), ('All Files', '*.*'))):
             if file not in self.files:
-                self.files[1].append(file)
-                self.file_cbox['values'] = self.files[0] + self.files[1]
+                self.files[1].append(file.replace('/', '\\'))
+                self.file_cbox['values'] = [file.split('\\')[-1] for file in (self.files[0] + self.files[1])]
                 self.file_cbox.current(len(self.file_cbox['values']) - 1)
-                self.open_file(file)
+                self.open_file(self.file_cbox['values'][-1])
 
     def open_file(self, file):
         """
@@ -257,7 +269,8 @@ class Canvas(tk.Frame):
         self.frame_count = 0
         self.point_count = 0
 
-        self.data = ilda.unpack_ilda(file, filter = True)
+        filepath = (self.files[0] + self.files[1])[self.file_cbox['values'].index(file)]
+        self.data = ilda.unpack_ilda(filepath, filter = True)
         self.new_data = True
 
     def close_file(self):
@@ -345,8 +358,8 @@ class Canvas(tk.Frame):
         scale = int(self.scale_entry.get())
         if scale < 1:
             scale = 1
-        elif scale > 100:
-            scale = 100
+        elif scale > 200:
+            scale = 200
 
         self.scale_slider.set(scale)
 

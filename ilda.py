@@ -108,13 +108,42 @@ def read_record(record, format):
 
     return x, y, status
 
-def filter_records(records: list):
+def filter_records(records: list, tol: float = 0.002):
     """
-    Removes empty records and "off" records that are not followed by an "on" record.
+    Removes duplicates, superfluous "off" records, and straight lines using linear regression.
 
     Returns:
         list: filtered records.
     """
 
-    return [pos for i,pos in enumerate(records) if pos[2] or i+1 == len(records) or records[i+1][2]]
-        
+    # remove duplicates and superfluous records
+    records = [pos for i,pos in enumerate(records) if i+1 == len(records) or (pos != records[i+1] and (pos[2] or records[i+1][2]))]
+
+    # remove straight lines
+    filtered = []
+    for i in range(len(records)):
+        if i == 0 or i+1 == len(records):
+            filtered.append(records[i])
+            continue
+
+        x0, y0, s0 = records[i-1]
+        x1, y1, s1 = records[i]
+        x2, y2, s2 = records[i+1]
+
+        if s0 != s1 or s1 != s2:
+            filtered.append(records[i])
+            continue   
+
+        if x0 == x1:
+            if x1 != x2:
+                filtered.append(records[i])
+            continue
+
+        m = (y1-y0)/(x1-x0)
+        b = y0 - m*x0
+        y2s = m*x2 + b
+
+        if y2s < y2 - 65535*tol or y2s > y2 + 65535*tol:
+            filtered.append(records[i])
+
+    return filtered
