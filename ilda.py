@@ -108,7 +108,7 @@ def read_record(record, format):
 
     return x, y, status
 
-def filter_records(records: list, tol: float = 0.002):
+def filter_records(records: list, tol: float = 0.001):
     """
     Removes duplicates, superfluous "off" records, and straight lines using linear regression.
 
